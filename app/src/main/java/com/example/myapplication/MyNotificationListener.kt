@@ -23,6 +23,7 @@ class MyNotificationListener : NotificationListenerService() {
         // 3. Parse
         val parsed = TransactionParser.parse(body)
 
+
         if (parsed != null) {
             // ✅ LOGIC: If parser found a name (e.g. "Netflix"), use it.
             // If parser returned null (generic msg), use the Sender Title (e.g. "AD-HDFCBK").

@@ -1,9 +1,12 @@
 package com.example.myapplication
 
 data class Transaction(
-    val title: String,      // e.g., "HDFC Bank" or "Paytm"
-    val type: String,       // "credit" or "debit"
+    val id: String,          // Unique Hash
+    val title: String,       // Merchant Name (e.g. "Netflix") or Sender (e.g. "HDFCBK")
     val amount: Int,
-    val dateKey: String,    // "2023-10-27" (Used for grouping)
-    val timeFormatted: String // "10:30 PM" (IST)
+    val type: String,        // "credit" or "debit"
+    val dateKey: String,     // "2025-12-20"
+    val timeFormatted: String, // "11:45 AM"
+    val sender: String,      // The Bank Sender ID (e.g., "AD-HDFCBK-S")
+    val rawMessage: String   // The full SMS body
 )

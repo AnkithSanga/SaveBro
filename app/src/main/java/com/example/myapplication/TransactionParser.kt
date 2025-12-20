@@ -2,21 +2,19 @@ package com.example.myapplication
 
 object TransactionParser {
 
-    // Regex to handle "Rs.140.00", "Rs 140", or "₹140"
-    private val amountRegex = Regex("""(?:Rs\.?|₹)\s?([\d,]+\.?\d*)""", RegexOption.IGNORE_CASE)
+    private val amountRegex = Regex("""(?:Rs\.?|₹|INR)\s?([\d,]+\.?\d*)""", RegexOption.IGNORE_CASE)
 
     fun parse(message: String): ParsedData? {
         val text = message.lowercase()
 
-        // 🛑 FILTER: Ignore mandate creations, requests, or login alerts
-        if (text.contains("requested") || text.contains("successfully created") || text.contains("login alert")) {
-            return null
-        }
+        // 🛑 Filter: Ignore non-financial messages
+        if (text.contains("requested") || text.contains("successfully created") ||
+            text.contains("declined") || text.contains("login alert")) return null
 
         // 1. Detect Type
         val type = when {
-            text.contains("credit alert") || text.contains("credited to") -> "credit"
-            text.contains("sent rs") || text.contains("spent rs") || text.contains("will be deducted") -> "debit"
+            text.contains("credit") || text.contains("credited") -> "credit"
+            text.contains("debit") || text.contains("sent rs") || text.contains("spent rs") || text.contains("deducted") || text.contains("paid") -> "debit"
             else -> return null
         }
 
@@ -24,17 +22,19 @@ object TransactionParser {
         val match = amountRegex.find(message) ?: return null
         val amount = match.groupValues[1].replace(",", "").toDoubleOrNull()?.toInt() ?: 0
 
-        // 3. Extract Merchant/Recipient Name
-        // Logic: For "To [Name]", extract [Name]. For "from VPA [Name]", extract [Name].
-        val name = when {
-            text.contains("to ") -> message.substringAfter("To ").substringBefore("\n").substringBefore("On ").trim()
-            text.contains("at ") -> message.substringAfter("At ").substringBefore(" On ").trim()
-            text.contains("from vpa ") -> message.substringAfter("from VPA ").substringBefore(" (").trim()
-            else -> "HDFC Transaction"
+        // 3. Extract Merchant/Name (Generic Logic)
+        // Looks for "To X", "At X", "From X", "towards X"
+        val extractedName = when {
+            message.contains("To ", true) -> message.substringAfter("To ", "to ").substringBefore("\n").substringBefore(" On ").trim()
+            message.contains("At ", true) -> message.substringAfter("At ", "at ").substringBefore(" On ").trim()
+            message.contains("from VPA ", true) -> message.substringAfter("from VPA ").substringBefore(" (").trim()
+            message.contains("towards ", true) -> message.substringAfter("towards ").substringBefore(" from ").trim()
+            message.contains("credited to", true) -> null // Usually "credited to YOUR account", so no merchant name
+            else -> null
         }
 
-        return ParsedData(name, type, amount)
+        return ParsedData(extractedName, type, amount)
     }
 }
 
-data class ParsedData(val title: String, val type: String, val amount: Int)
+data class ParsedData(val title: String?, val type: String, val amount: Int)

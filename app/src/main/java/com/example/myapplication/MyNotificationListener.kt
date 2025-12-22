@@ -37,6 +37,7 @@ class MyNotificationListener : NotificationListenerService() {
             )
 
             NotificationStore.lastNotification = "Saved: $finalDisplayName (₹${parsed.amount})"
+
         }
     }
 }

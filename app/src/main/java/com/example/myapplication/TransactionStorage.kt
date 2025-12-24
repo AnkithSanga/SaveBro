@@ -77,7 +77,7 @@ object TransactionStorage {
                         val obj = arr.getJSONObject(i)
                         list.add(Transaction(
                             id = obj.optString("id"),
-                            title = obj.optString("name"), // Merchant Name
+                            title = if (obj.optString("type") == "credit") obj.optString("sender") else obj.optString("name"), // Merchant Name
                             amount = obj.optInt("amount"),
                             type = obj.optString("type"),
                             dateKey = date,

@@ -37,7 +37,7 @@ object InboxReader {
         )
         cursor?.use {
             while (it.moveToNext()) {
-                processMessage(context, it.getString(0), it.getString(1))
+                processMessage(context, it.getString(0), it.getString(1) )
             }
         }
     }

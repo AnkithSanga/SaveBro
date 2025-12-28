@@ -8,11 +8,8 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 object TransactionStorage {
-
     private const val DIR_NAME = "BudgetTracker"
-    private const val FILE_NAME = "transactions_full.json"
-
-    // 🕒 Formatters
+    private const val FILE_NAME = "transactions_final.json"
     private val dateFormatter = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply { timeZone = TimeZone.getTimeZone("Asia/Kolkata") }
     private val timeFormatter = SimpleDateFormat("hh:mm a", Locale.US).apply { timeZone = TimeZone.getTimeZone("Asia/Kolkata") }
 
@@ -22,81 +19,53 @@ object TransactionStorage {
         return File(dir, FILE_NAME)
     }
 
-    // ✅ SAVE FUNCTION
-    fun saveTransaction(senderName: String, merchantName: String, type: String, amount: Int, rawMessage: String) {
+    fun saveTransaction(senderName: String, merchantName: String, type: String, amount: Int, rawMessage: String, location: String = "Unknown") {
         val file = getFile()
-        val now = Date()
-        val dateKey = dateFormatter.format(now)
-        val timeStr = timeFormatter.format(now)
-
-        // 🆔 Unique Hash
+        val dateKey = dateFormatter.format(Date())
         val txnId = (rawMessage + amount + dateKey).hashCode().toString()
-
         val rootJson = if (file.exists() && file.readText().isNotEmpty()) JSONObject(file.readText()) else JSONObject()
 
-        if (rootJson.toString().contains(txnId)) return // Deduplicate
+        if (rootJson.toString().contains(txnId)) return
 
         val dayObj = rootJson.optJSONObject(dateKey) ?: JSONObject()
         val listKey = if (type == "credit") "credits" else "debits"
         val txnArray = dayObj.optJSONArray(listKey) ?: JSONArray()
 
-        val txnObj = JSONObject().apply {
-            put("id", txnId)
-            put("sender", senderName)
-            put("name", merchantName)
-            put("amount", amount)
-            put("type", type)
-            put("time", timeStr)
-            put("raw_body", rawMessage)
-        }
-
-        txnArray.put(txnObj)
+        txnArray.put(JSONObject().apply {
+            put("id", txnId); put("sender", senderName); put("name", merchantName)
+            put("amount", amount); put("type", type); put("time", timeFormatter.format(Date()))
+            put("raw_body", rawMessage); put("location", location)
+        })
         dayObj.put(listKey, txnArray)
         rootJson.put(dateKey, dayObj)
-
-        try { file.writeText(rootJson.toString(4)) } catch (e: Exception) { e.printStackTrace() }
+        file.writeText(rootJson.toString(4))
     }
 
-    // ✅ FIXED: Renamed to match your MainActivity call
     fun readAllForUI(): List<Transaction> {
         val file = getFile()
         if (!file.exists()) return emptyList()
-
         val list = mutableListOf<Transaction>()
         try {
             val rootJson = JSONObject(file.readText())
-            val dates = rootJson.keys()
-
-            while (dates.hasNext()) {
-                val date = dates.next()
-                val dayObj = rootJson.getJSONObject(date)
-
-                listOf("credits", "debits").forEach { listType ->
-                    val arr = dayObj.optJSONArray(listType) ?: JSONArray()
+            rootJson.keys().forEach { date ->
+                val day = rootJson.getJSONObject(date)
+                listOf("credits", "debits").forEach { key ->
+                    val arr = day.optJSONArray(key) ?: JSONArray()
                     for (i in 0 until arr.length()) {
                         val obj = arr.getJSONObject(i)
                         list.add(Transaction(
-                            id = obj.optString("id"),
-                            title = if (obj.optString("type") == "credit") obj.optString("sender") else obj.optString("name"), // Merchant Name
-                            amount = obj.optInt("amount"),
-                            type = obj.optString("type"),
-                            dateKey = date,
-                            timeFormatted = obj.optString("time"),
-                            sender = obj.optString("sender"),
-                            rawMessage = obj.optString("raw_body")
+                            obj.getString("id"),
+                            if (obj.getString("type") == "credit") obj.getString("sender") else obj.optString("name", obj.getString("sender")),
+                            obj.getInt("amount"), obj.getString("type"), date,
+                            obj.getString("time"), obj.getString("sender"),
+                            obj.getString("raw_body"), obj.optString("location", "Unknown")
                         ))
                     }
                 }
             }
-        } catch (e: Exception) { e.printStackTrace() }
-
-        // Sort: Newest Date First, then Time
+        } catch (e: Exception) {}
         return list.sortedByDescending { it.dateKey + it.timeFormatted }
     }
 
-    // ✅ FIXED: Renamed to match your MainActivity call
-    fun readRawJson(): String {
-        val file = getFile()
-        return if (file.exists()) file.readText() else "{}"
-    }
+    fun readRawJson(): String = if (getFile().exists()) getFile().readText() else "{}"
 }

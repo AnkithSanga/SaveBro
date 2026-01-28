@@ -43,7 +43,7 @@ object InboxReader {
     }
 
     private suspend fun processMessage(context: Context, address: String, body: String) {
-        if (address.uppercase().endsWith("-S") && !address.contains("-P")) {
+        if (address.uppercase().endsWith("-S")) {
             val parsed = TransactionParser.parse(body)
             if (parsed != null) {
                 // ✅ Fetch location and WAIT for it

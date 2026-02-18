@@ -25,6 +25,7 @@ class SmsReceiver : BroadcastReceiver() {
                             val coords = LocationProvider.getCurrentLocation(context)
 
                             TransactionStorage.saveTransaction(
+                                context = context,
                                 senderName = sender,
                                 merchantName = parsed.title ?: sender,
                                 type = parsed.type,

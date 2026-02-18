@@ -29,11 +29,12 @@ class MyNotificationListener : NotificationListenerService() {
             val finalDisplayName = parsed.title ?: senderTitle
 
             TransactionStorage.saveTransaction(
+                context = this,
                 senderName = senderTitle,
                 merchantName = finalDisplayName,
                 type = parsed.type,
                 amount = parsed.amount,
-                rawMessage = body
+                rawMessage = body,
             )
 
             NotificationStore.lastNotification = "Saved: $finalDisplayName (₹${parsed.amount})"

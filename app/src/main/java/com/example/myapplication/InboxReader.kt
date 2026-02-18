@@ -55,7 +55,8 @@ object InboxReader {
                     type = parsed.type,
                     amount = parsed.amount,
                     rawMessage = body,
-                    location = loc
+                    location = loc,
+                    context=context
                 )
             }
         }

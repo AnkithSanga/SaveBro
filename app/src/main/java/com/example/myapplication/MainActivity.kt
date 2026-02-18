@@ -51,7 +51,7 @@ fun BudgetScreen() {
     val scope = rememberCoroutineScope()
     var transactions by remember { mutableStateOf(listOf<Transaction>()) }
 
-    LaunchedEffect(Unit) { while(true) { transactions = TransactionStorage.readAllForUI(); delay(2000) } }
+    LaunchedEffect(Unit) { while(true) { transactions = TransactionStorage.readAllForUI(context); delay(2000) } }
 
     Scaffold(
         floatingActionButton = {

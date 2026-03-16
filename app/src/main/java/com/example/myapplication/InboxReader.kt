@@ -50,13 +50,13 @@ object InboxReader {
                 val loc = LocationProvider.getCurrentLocation(context.applicationContext)
 
                 TransactionStorage.saveTransaction(
+                    context = context,
                     senderName = address,
                     merchantName = parsed.title ?: address,
                     type = parsed.type,
                     amount = parsed.amount,
                     rawMessage = body,
-                    location = loc,
-                    context=context
+                    location = loc
                 )
             }
         }

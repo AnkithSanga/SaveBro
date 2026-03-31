@@ -1,6 +1,9 @@
 package com.example.myapplication
 
 import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -24,6 +27,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -47,16 +51,20 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun checkPermissions() {
-        val ps = arrayOf(
+        val ps = mutableListOf(
             Manifest.permission.READ_SMS,
             Manifest.permission.RECEIVE_SMS,
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION
         )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ps.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        
         val allGranted = ps.all { ContextCompat.checkSelfPermission(this, it) == android.content.pm.PackageManager.PERMISSION_GRANTED }
         
         if (!allGranted) {
-            permissionLauncher.launch(ps)
+            permissionLauncher.launch(ps.toTypedArray())
         } else {
             startService(Intent(this, SmsService::class.java))
         }
@@ -77,8 +85,17 @@ fun BudgetScreen() {
 
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(onClick = { scope.launch { withContext(Dispatchers.IO) { InboxReader.syncTodaysInbox(context) } } }) {
-                Icon(Icons.Default.Refresh, "Sync")
+            Column(horizontalAlignment = Alignment.End) {
+                FloatingActionButton(
+                    onClick = { sendTestNotification(context) },
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                ) {
+                    Text("Test 🔔", modifier = Modifier.padding(horizontal = 8.dp))
+                }
+                Spacer(Modifier.height(16.dp))
+                FloatingActionButton(onClick = { scope.launch { withContext(Dispatchers.IO) { InboxReader.syncTodaysInbox(context) } } }) {
+                    Icon(Icons.Default.Refresh, "Sync")
+                }
             }
         }
     ) { padding ->
@@ -90,6 +107,25 @@ fun BudgetScreen() {
             }
         }
     }
+}
+
+fun sendTestNotification(context: Context) {
+    val channelId = "test_notifications"
+    val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        val channel = NotificationChannel(channelId, "Test Notifications", NotificationManager.IMPORTANCE_HIGH)
+        notificationManager.createNotificationChannel(channel)
+    }
+
+    val notification = NotificationCompat.Builder(context, channelId)
+        .setSmallIcon(android.R.drawable.ic_dialog_info)
+        .setContentTitle("HDFC-BANK-S")
+        .setContentText("Paid Rs. 500 to Netflix At 12:30 PM On 20-Oct-2023")
+        .setPriority(NotificationCompat.PRIORITY_HIGH)
+        .build()
+
+    notificationManager.notify(102, notification)
 }
 
 @Composable
@@ -105,7 +141,11 @@ fun TransactionRow(txn: Transaction) {
                         Text("  |  ", color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
                         Text("View Map 📍", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.clickable {
-                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=${txn.location}(${txn.title})")).setPackage("com.google.android.apps.maps"))
+                                try {
+                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=${txn.location}(${txn.title})")).setPackage("com.google.android.apps.maps"))
+                                } catch (e: Exception) {
+                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=${txn.location}(${txn.title})")))
+                                }
                             }
                         )
                     }

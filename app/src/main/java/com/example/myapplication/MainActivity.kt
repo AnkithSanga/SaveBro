@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -67,37 +68,51 @@ class MainActivity : ComponentActivity() {
         } else {
             startService(Intent(this, SmsService::class.java))
         }
-        // REMOVED: MANAGE_EXTERNAL_STORAGE check as it is not needed for app-specific folders.
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BudgetScreen() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var transactions by remember { mutableStateOf(listOf<Transaction>()) }
 
-    LaunchedEffect(Unit) { while(true) { transactions = TransactionStorage.readAllForUI(context); delay(2000) } }
+    LaunchedEffect(Unit) {
+        while(true) {
+            transactions = TransactionStorage.readAllForUI(context)
+            delay(2000)
+        }
+    }
 
     Scaffold(
-        floatingActionButton = {
-            Column(horizontalAlignment = Alignment.End) {
-                FloatingActionButton(
-                    onClick = { sendTestNotification(context) },
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer
-                ) {
-                    Text("Test 🔔", modifier = Modifier.padding(horizontal = 8.dp))
+        topBar = {
+            TopAppBar(
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("💰 Budget Tracker", fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.width(8.dp))
+                        IconButton(onClick = { sendTestNotification(context) }) {
+                            Icon(Icons.Default.Notifications, contentDescription = "Test Notification")
+                        }
+                    }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        scope.launch {
+                            withContext(Dispatchers.IO) {
+                                InboxReader.syncTodaysInbox(context)
+                            }
+                        }
+                    }) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Sync")
+                    }
                 }
-                Spacer(Modifier.height(16.dp))
-                FloatingActionButton(onClick = { scope.launch { withContext(Dispatchers.IO) { InboxReader.syncTodaysInbox(context) } } }) {
-                    Icon(Icons.Default.Refresh, "Sync")
-                }
-            }
+            )
         }
     ) { padding ->
-        Column(Modifier.padding(padding).padding(16.dp)) {
-            Text("💰 Budget Tracker", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(20.dp))
+        Column(Modifier.padding(padding).padding(horizontal = 16.dp)) {
+            Spacer(Modifier.height(8.dp))
             LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(transactions) { TransactionRow(it) }
             }

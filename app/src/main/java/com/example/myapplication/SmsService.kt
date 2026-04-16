@@ -39,7 +39,7 @@ class SmsService : Service() {
             val channel = NotificationChannel(channelId, "SMS Sync", NotificationManager.IMPORTANCE_LOW)
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
-        return NotificationCompat.Builder(this, channelId).setContentTitle("Budget Tracker Active").setSmallIcon(android.R.drawable.ic_menu_save).build()
+        return NotificationCompat.Builder(this, channelId).setContentTitle("Save Bro is running").setSmallIcon(android.R.drawable.ic_menu_save).build()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
